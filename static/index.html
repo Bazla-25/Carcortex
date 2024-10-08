@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Questions Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8cdda, #1d2b64); /* Vibrant gradient background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #chat-container {
+            max-width: 600px;
+            width: 100%;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        #chat-container h1 {
+            text-align: center;
+            color: #1d2b64;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        #messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #f0f4f9;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            line-height: 1.4;
+            max-width: 80%;
+            display: inline-block;
+        }
+
+        .message.user {
+            text-align: right;
+            background-color: #00a8ff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .message.bot {
+            text-align: left;
+            background-color: #f0932b;
+            color: white;
+            margin-right: auto;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 80px);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: #1d2b64;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            background-color: #00a8ff;
+            color: white;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s;
+        }
+
+        button:hover {
+            background-color: #0097e6;
+            transform: scale(1.05);
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container">
+        <h1>Welcome to CarCortex</h1>
+        <div id="messages" aria-live="polite"></div>
+        <div>
+            <input type="text" id="user-question" placeholder="Ask a question about cars..." />
+            <button id="send-button" onclick="sendQuestion()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        function addMessage(message, user = false, loading = false) {
+            const messagesDiv = document.getElementById('messages');
+            const newMessageDiv = document.createElement('div');
+            newMessageDiv.classList.add('message');
+            if (user) newMessageDiv.classList.add('user');
+            else newMessageDiv.classList.add('bot');
+
+            if (loading) {
+                newMessageDiv.id = 'loadingMessage';  // Add an ID for the loading message
+            }
+
+            newMessageDiv.textContent = message;
+            messagesDiv.appendChild(newMessageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to the bottom
+        }
+        function hideLoadingMessage() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            if (loadingMessage) {
+                loadingMessage.remove();  // Remove the loading message from the DOM
+            }
+        }
+        function showResponse(response) {
+            hideLoadingMessage();  // Hide or remove the loading message
+            addMessage(response, false);  // Add the bot's response
+        }        
+        async function sendQuestion() {
+            const question = document.getElementById('user-question').value;
+            const sendButton = document.getElementById('send-button');
+
+            if (!question) return;
+
+            addMessage(question, true); // Show user's question in chat
+
+            // Check for quit command
+            if (question.toLowerCase() === "quit") {
+                addMessage("Session ended. Goodbye!", true);
+                document.getElementById('user-question').disabled = true; // Disable input
+                sendButton.disabled = true; // Disable button
+                return;
+            }
+
+            // Show loading message
+            addMessage("Loading...", true, true); 
+
+            sendButton.disabled = true; // Disable button while loading
+
+            try {
+                const response = await fetch("http://127.0.0.1:8080/ask", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const data = await response.json();
+                showResponse(data.answer)
+                //addMessage(data.answer); // Show the API's response in chat
+            } catch (error) {
+                addMessage("Error: Unable to get a response. Please try again later.", false);
+            } finally {
+                sendButton.disabled = false; // Re-enable button
+                // Clear input field
+                document.getElementById('user-question').value = '';
+            }
+        }
+    </script>
+</body>
+
+</html>
